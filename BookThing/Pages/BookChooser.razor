@@ -1,0 +1,84 @@
+﻿@page "/bookchooser"
+@using BookThing.Data
+@using System.Linq
+@inject BookDbController BookDB
+
+<h1>Unread Books</h1>
+<p style="color:red">@Error</p>
+@if (books == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <p>
+        <button class="btn btn-success"
+        @onclick="Shuffle">
+            Shuffle Books
+        </button>
+    </p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Genre</th>
+                <th>Description</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var book in books.Where(b => !b.Read))
+            {
+                <tr>
+                    <td>@book.Title</td>
+                    <td>@book.Author</td>
+                    <td>@book.Genre</td>
+                    <td>@book.Description</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code
+{
+    private string Error = "";
+
+    private List<BookData> books = new();
+
+    protected override async Task OnInitializedAsync ()
+    {
+        books = await BookDB.GetAll();
+    }
+
+    private void Shuffle()
+    {
+        var seed = (int)DateTime.Now.Ticks;
+
+        if (seed == 0)
+            seed = 42069;
+
+        //fisher-yates shuffle
+        for(var i = books.Count - 1; i > 0; i--)
+        {
+            var j = RandomIndex(ref seed, i);
+
+            //we do a little switcheroo
+            (books[i], books[j]) = (books[j], books[i]);
+        }
+    }
+
+    private int RandomIndex(ref int seed, int max)
+    {
+        if (seed == 0)
+            throw new InvalidOperationException("Seed cannot be equal to zero");
+
+        seed ^= seed << 13;
+        seed ^= seed << 17;
+        seed ^= seed << 5;
+
+        return Math.Abs(seed % max);
+    }
+}

@@ -1,0 +1,170 @@
+﻿@page "/"
+@using BookThing.Data
+@inject BookDbController BookDB
+
+<h1>Books</h1>
+<p style="color:red">@Error</p>
+@if (books == null)
+{
+    <p><em>Loading...</em></p>
+} else
+{
+    <p>
+        <button class="btn btn-success"
+        @onclick="AddNewBook">
+            Add New Book
+        </button>
+    </p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Genre</th>
+                <th>Description</th>
+                <th>Read</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var book in books)
+            {
+                <tr>
+                    <td>@book.Title</td>
+                    <td>@book.Author</td>
+                    <td>@book.Genre</td>
+                    <td>@book.Description</td>
+                    <td>@book.Read</td>
+                    <td>
+                        <button class="btn btn-primary"
+                        @onclick="(() => Edit(book))">
+                            Edit
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    
+
+    @if (popUpEnabled)
+    {
+        <div class="modal" tabindex="-1" style="display:block" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">Edit Book</h3>
+
+                        <button type="button" class="close"
+                        @onclick="ClosePopUp">
+                            <span aria-hidden="true">X</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input class="form-control" type="text"
+                               placeholder="Title"
+                        @bind="bookData.Title" />
+
+                        <input class="form-control" type="text"
+                               placeholder="Author"
+                        @bind="bookData.Author" />
+
+                        <input class="form-control" type="text"
+                               placeholder="Genre"
+                        @bind="bookData.Genre" />
+
+                        <input class="form-control" type="text"
+                               placeholder="Description"
+                        @bind="bookData.Description" />
+                        <br />
+                        <div>
+                            Mark Read:
+                            <input type="checkbox"
+                            @bind="bookData.Read" />
+                        </div>
+                        <br />
+                        <button class="btn btn-success"
+                        @onclick="Save">
+                            Save
+                        </button>&nbsp;
+                        @if (bookData.ID > 0)
+                        {
+                            <button class="btn btn-danger"
+                            @onclick="Delete">
+                                Delete
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code
+{
+    private string Error = "";
+
+    private List<BookData> books = new();
+    private BookData bookData = new BookData();
+
+    private bool popUpEnabled = false;
+
+    protected override async Task OnInitializedAsync ()
+    {
+        books = await BookDB.GetAll();
+    }
+
+    private void AddNewBook ()
+    {
+        bookData = new() { ID = 0 };
+        popUpEnabled = true;
+    }
+
+    private void Edit (BookData data)
+    {
+        bookData = data;
+        popUpEnabled = true;
+    }
+
+    private void ClosePopUp () => popUpEnabled = false;
+
+    private async Task Save ()
+    {
+        ClosePopUp();
+        Error = string.Empty;
+
+        try
+        {
+            if (bookData.ID > 0)
+                await BookDB.Edit(bookData);
+            else
+            {
+                var data = await BookDB.Create(bookData);
+                books.Add(data);
+            }
+        } catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+
+    }
+
+    private async Task Delete ()
+    {
+        try
+        {
+            if (bookData.ID > 0)
+            {
+                await BookDB.Delete(bookData);
+                books.RemoveAll(x => x.ID == bookData.ID);
+            }
+        } catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+
+    }
+}
